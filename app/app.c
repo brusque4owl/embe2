@@ -5,8 +5,11 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <string.h>
+#include <sys/ioctl.h>
 
 #include "./fpga_dot_font.h"
+
+#include "../module/dev_driver.h"
 
 #define FPGA_DOT_DEVICE "/dev/fpga_dot"
 #define FND_DEVICE "/dev/fpga_fnd"
@@ -26,6 +29,17 @@ struct fnd_args {
 	int time_interval, time_repeat;
 	char start_option[5];
 };
+//write(dev_fd, &gdata, sizeof(ret_val));
+int ioctl_write(int dev_fd, char *gdata){
+	int ret_val;
+	ret_val = ioctl(dev_fd, IOCTL_WRITE, gdata);
+	if(ret_val < 0) {
+		printf("ioctl_write failed:%d\n", ret_val);
+		return -1;
+	}
+	printf("ioctl_write success\n");
+	return 0;
+}
 
 int main(int argc, char **argv)
 {
@@ -108,8 +122,8 @@ int main(int argc, char **argv)
 	}
 	printf("\n\n");
 	*/
-	
-	write(dev_fd, &gdata, sizeof(ret_val));
+	ioctl_write(dev_fd, gdata);
+	//write(dev_fd, &gdata, sizeof(gdata));
 	close(dev_fd);
 	
 	printf("Success.\n");

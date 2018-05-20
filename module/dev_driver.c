@@ -5,6 +5,8 @@
 #include <linux/kernel.h>
 #include <linux/uaccess.h>
 
+#include "dev_driver.h"
+
 #define DEV_DRIVER_MAJOR 242
 #define DEV_DRIVER_MINOR 0
 #define DEV_DRIVER_NAME "dev_driver"
@@ -14,11 +16,15 @@ static int dev_driver_usage = 0;
 int dev_driver_open(struct inode *, struct file *);
 int dev_driver_release(struct inode *, struct file *);
 ssize_t dev_driver_write(struct file *, const char *, size_t, loff_t *);
+long dev_driver_ioctl(struct file *inode,
+					 unsigned int ioctl_num,
+					 unsigned long ioctl_param);
 
 static struct file_operations dev_driver_fops =
 { 
 	.open = dev_driver_open, 
 	.write = dev_driver_write,
+	.unlocked_ioctl = dev_driver_ioctl,
 	.release = dev_driver_release
 };
 
@@ -82,6 +88,8 @@ ssize_t dev_driver_write(struct file *inode, const char *gdata, size_t length, l
 	time_interval = gdata[2];
 	time_repeat   = gdata[3];
 
+//*******************************************************
+// Start of Setting timer
 	mydata.count = 0;
 	mydata.time_interval = time_interval;
 	mydata.time_repeat = time_repeat;
@@ -89,13 +97,28 @@ ssize_t dev_driver_write(struct file *inode, const char *gdata, size_t length, l
 
 	del_timer_sync(&mydata.timer);
 
-	//mydata.timer.expires=get_jiffies_64()+(time_interval*100*HZ);
 	mydata.timer.expires=get_jiffies_64()+(time_interval*HZ/10);
 	mydata.timer.data = (unsigned long)&mydata;
 	mydata.timer.function	= kernel_timer_blink;
 
 	add_timer(&mydata.timer);
+// End of setting timer
+//*******************************************************
 	return 1;
+}
+
+long dev_driver_ioctl(struct file *inode,
+					 unsigned int ioctl_num,
+					 unsigned long ioctl_param) {
+	int ret_val;
+	printk("\n\nnow it is using ioctl in kernel\n\n");	
+	switch(ioctl_num){
+		case IOCTL_WRITE:
+			ret_val = dev_driver_write(inode, (char *)ioctl_param, 0, 0);
+			if(ret_val==-EFAULT) return -1;
+			break;
+	}
+	return 0;
 }
 
 int __init dev_driver_init(void)
