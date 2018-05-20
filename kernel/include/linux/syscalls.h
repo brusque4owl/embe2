@@ -64,8 +64,7 @@ struct old_linux_dirent;
 struct perf_event_attr;
 struct file_handle;
 /////// new_systemcall
-struct mystruct;
-struct calc;
+struct fnd_args;
 
 #include <linux/types.h>
 #include <linux/aio_abi.h>
@@ -851,8 +850,6 @@ asmlinkage long sys_open_by_handle_at(int mountdirfd,
 				      int flags);
 asmlinkage long sys_setns(int fd, int nstype);
 ////////////////new_systemcall////////////
-asmlinkage int sys_newcall(int a);
-asmlinkage int sys_newcall2(struct mystruct *dd);
-asmlinkage int sys_newcall3(struct calc *input);
+asmlinkage int sys_get_fnd_info(struct fnd_args *app_args);
 
 #endif

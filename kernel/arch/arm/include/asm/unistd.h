@@ -403,9 +403,7 @@
 #define __NR_sendmmsg			(__NR_SYSCALL_BASE+374)
 #define __NR_setns			(__NR_SYSCALL_BASE+375)
 ///////new systemcall//////
-#define __NR_newcall		(__NR_SYSCALL_BASE+376)
-#define __NR_newcall2		(__NR_SYSCALL_BASE+377)
-#define __NR_newcall3		(__NR_SYSCALL_BASE+378)
+#define __NR_get_fnd_info		(__NR_SYSCALL_BASE+376)
 /*
  * The following SWIs are ARM private.
  */

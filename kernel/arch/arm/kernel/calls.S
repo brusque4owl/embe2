@@ -386,9 +386,7 @@
 		CALL(sys_sendmmsg)
 /* 375 */	CALL(sys_setns)
 ///////////////new systemcall/////////////
-		CALL(sys_newcall)
-		CALL(sys_newcall2)
-		CALL(sys_newcall3)
+		CALL(sys_get_fnd_info)
 
 #ifndef syscalls_counted
 .equ syscalls_padding, ((NR_syscalls + 3) & ~3) - NR_syscalls
