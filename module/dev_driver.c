@@ -25,6 +25,8 @@ static struct file_operations dev_driver_fops =
 static struct struct_mydata {
 	struct timer_list timer;
 	int count;
+	char time_interval;
+	char time_repeat;
 };
 
 struct struct_mydata mydata;
@@ -47,47 +49,52 @@ int dev_driver_open(struct inode *minode, struct file *mfile) {
 static void kernel_timer_blink(unsigned long timeout) {
 	struct struct_mydata *p_data = (struct struct_mydata*)timeout;
 
-	printk("kernel_timer_blink %d\n", p_data->count);
+	printk("kernel_timer_count %d\n", p_data->count);
 
 	p_data->count++;
-	if( p_data->count > 15 ) {
+	if( p_data->count > p_data->time_repeat ) {
 		return;
 	}
-
-	mydata.timer.expires = get_jiffies_64() + (1 * HZ);
+	mydata.timer.expires=get_jiffies_64()+(p_data->time_interval*HZ/10);
 	mydata.timer.data = (unsigned long)&mydata;
-	mydata.timer.function = kernel_timer_blink;
+	mydata.timer.function	= kernel_timer_blink;
 
 	add_timer(&mydata.timer);
 }
 
 ssize_t dev_driver_write(struct file *inode, const char *gdata, size_t length, loff_t *off_what) {
+	int i;
 	const char *tmp = gdata;
 	char syscall_data[4];	// store return value of syscall
+	char fnd_place, fnd_value, time_interval, time_repeat;
+
 	printk("dev_driver_write\n");
 	if (copy_from_user(&syscall_data, tmp, 1)) {
 		return -EFAULT;
 	}
-	int i;
 	printk("\n\n");
 	for(i=0;i<4;i++){
 		printk("gdata[%d] = %d\n", i, gdata[i]);
 	}
 	printk("\n\n");
-	//char fnd_place, fnd_value, time_interval, time_repeat;
-	/*
-	mydata.count = kernel_timer_buff;
+	fnd_place = gdata[0];
+	fnd_value = gdata[1];
+	time_interval = gdata[2];
+	time_repeat   = gdata[3];
 
-	printk("data  : %d \n",mydata.count);
+	mydata.count = 0;
+	mydata.time_interval = time_interval;
+	mydata.time_repeat = time_repeat;
+	printk("timer repeat : %d \n",mydata.time_repeat);
 
 	del_timer_sync(&mydata.timer);
 
-	mydata.timer.expires = jiffies + (1 * HZ);
+	//mydata.timer.expires=get_jiffies_64()+(time_interval*100*HZ);
+	mydata.timer.expires=get_jiffies_64()+(time_interval*HZ/10);
 	mydata.timer.data = (unsigned long)&mydata;
 	mydata.timer.function	= kernel_timer_blink;
 
 	add_timer(&mydata.timer);
-	*/
 	return 1;
 }
 
