@@ -17,6 +17,11 @@
 #define MAX_BUFF 32	// MAX value for lcd_device
 #define LINE_BUFF 16// ecah line has 16 characters
 
+#define MASK_FND_PLACE		( ((1<<32)-1) - ((1<<24)-1) )
+#define MASK_FND_VALUE		( ((1<<24)-1) - ((1<<16)-1) )
+#define MASK_TIME_INTERVAL	( ((1<<16)-1) - ((1<<8 )-1) )
+#define MASK_TIME_REPEAT	( (1<<8)-1 )
+
 struct fnd_args {
 	int time_interval, time_repeat;
 	char start_option[5];
@@ -78,9 +83,35 @@ int main(int argc, char **argv)
 	}
 
 	// Implement main program
+	
+	int dev_fd;
+	dev_fd = open("/dev/dev_driver", O_WRONLY);
+	if(dev_fd<0){
+		printf("Open Driver Failured!\n");
+		return -1;
+	}
+	
 	ret_val = syscall(376, &input);
 	printf("syscall ret_val = %d\n", ret_val);
 
+	// make gdata since can't pass int variable to write()
+	char gdata[4];
+	gdata[0] = (ret_val & MASK_FND_PLACE) >> 24;
+	gdata[1] = (ret_val & MASK_FND_VALUE) >> 16;
+	gdata[2] = (ret_val & MASK_TIME_INTERVAL) >> 8;
+	gdata[3] = (ret_val & MASK_TIME_REPEAT);
+	
+	/*
+	printf("\n\n");
+	for(i=0;i<4;i++){
+		printf("gdata[%d] = %d\n", i, gdata[i]);
+	}
+	printf("\n\n");
+	*/
+	
+	write(dev_fd, &gdata, sizeof(ret_val));
+	close(dev_fd);
+	
 	printf("Success.\n");
 	return 0;
 }

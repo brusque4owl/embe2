@@ -1,5 +1,11 @@
+app/app
+tags
 usage_of_sh
 backup_syscall/
 given/
-*.o
+*.o*
 *.sh
+*.ko*
+*.mod*
+*.order
+*.symvers
