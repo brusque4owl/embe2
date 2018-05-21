@@ -87,6 +87,9 @@ static void kernel_timer_blink(unsigned long timeout) {
 	// Check for terminating timer
 	p_data->count++;
 	if( p_data->count > p_data->time_repeat ) {
+		// Turn off the led module
+		led_value_short = 0;
+		outw(led_value_short, (unsigned int)iom_fpga_led_addr);
 		return;
 	}
 	printk("Executed kernel_timer_count %d\n", p_data->count);
