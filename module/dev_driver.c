@@ -23,11 +23,13 @@
 #define IOM_FND_ADDRESS 0x08000004	// address of fnd
 #define IOM_LED_ADDRESS 0x08000016	// address of led
 #define IOM_DOT_ADDRESS 0x08000210	// address of dot
-#define IOM_LCD_ADDRESS 0x08000090	// address of lcd(16*2=32bytes)
+#define IOM_TEXT_LCD_ADDRESS 0x08000090	// address of lcd(16*2=32bytes)
 
 // Global variable for fpga_modules
 static int dev_driver_usage = 0;
 static unsigned char *iom_fpga_fnd_addr;
+static unsigned char *iom_fpga_led_addr;
+
 
 // Define functions
 int dev_driver_open(struct inode *, struct file *);
@@ -76,8 +78,11 @@ static void kernel_timer_blink(unsigned long timeout) {
 	int i;
 	struct struct_mydata *p_data = (struct struct_mydata*)timeout;
 	// Variables for FND module
-	unsigned short int value_short = 0;
-	unsigned char value[4];
+	unsigned short fnd_value_short = 0;
+	unsigned short led_value_short = 0;
+
+	unsigned char fnd_value[4];
+	unsigned char led_value;
 
 	// Check for terminating timer
 	p_data->count++;
@@ -91,28 +96,62 @@ static void kernel_timer_blink(unsigned long timeout) {
 	for(i=0;i<4;i++){ // resolve 4bytes stream on fnd
 		if(p_data->fnd_place==i){
 			if(p_data->fnd_value%8==0)
-				value[i]=8;
+				fnd_value[i]=8;
 			else
-				value[i]=p_data->fnd_value%8;
+				fnd_value[i]=p_data->fnd_value%8;
 		}
 		else
-			value[i]=0;
+			fnd_value[i]=0;
 	}
-	value_short = value[0] << 12 | value[1] << 8 |
-				  value[2] << 4  | value[3];
-	outw(value_short, (unsigned int)iom_fpga_fnd_addr);
-		// update fnd_place, fnd_value;
+	fnd_value_short = fnd_value[0] << 12 | fnd_value[1] << 8 |
+				  fnd_value[2] << 4  | fnd_value[3];
+	outw(fnd_value_short, (unsigned int)iom_fpga_fnd_addr);
+	
+	// 2. Write to led device
+	// 2^(8-fnd_value[(int)p_data->fnd_place])
+	// ex) 1->1*2^7 / 2->2^6 / 3->2^5 ...
+	switch((int)fnd_value[(int)p_data->fnd_place]){
+		case 1:
+			led_value = 128;
+			break;
+		case 2:
+			led_value = 64;
+			break;
+		case 3:
+			led_value = 32;
+			break;
+		case 4:
+			led_value = 16;
+			break;
+		case 5:
+			led_value = 8;
+			break;
+		case 6:
+			led_value = 4;
+			break;
+		case 7:
+			led_value = 2;
+			break;
+		case 8:
+			led_value = 1;
+			break;
+		default:
+			printk("There is some error on fnd_value\n");
+			led_value = 3;
+			return;
+	}
+	led_value_short = (unsigned short)led_value;
+	outw(led_value_short, (unsigned int)iom_fpga_led_addr);
+	// 3. Write to dot device
+
+	// 4. Write to lcd device
+
+	// 5. update fnd_place, fnd_value;
 	p_data->fnd_value++;
 	if(p_data->count%8 == 0){
 		p_data->fnd_place++;
 		if(p_data->fnd_place>3) p_data->fnd_place=0;
 	}
-	// 2. Write to led device
-
-	// 3. Write to dot device
-
-	// 4. Write to lcd device
-
 	// re-register timer
 	mydata.timer.expires=get_jiffies_64()+(p_data->time_interval*HZ/10);
 	mydata.timer.data = (unsigned long)&mydata;
@@ -189,6 +228,7 @@ int __init dev_driver_init(void)
 
 	// Mapping fpga physical mem to kernel(fnd, led, dot, lcd)
 	iom_fpga_fnd_addr = ioremap(IOM_FND_ADDRESS, 0x4);
+	iom_fpga_led_addr = ioremap(IOM_LED_ADDRESS, 0x1);
 
 	// Initialize timer
 	init_timer(&(mydata.timer));
@@ -205,6 +245,7 @@ void __exit dev_driver_exit(void)
 
 	// Unmappingg fpga physical mem from kernel
 	iounmap(iom_fpga_fnd_addr);
+	iounmap(iom_fpga_led_addr);
 
 	unregister_chrdev(DEV_DRIVER_MAJOR, DEV_DRIVER_NAME);
 }
