@@ -31,7 +31,7 @@ static int dev_driver_usage = 0;
 static unsigned char *iom_fpga_fnd_addr;
 static unsigned char *iom_fpga_led_addr;
 static unsigned char *iom_fpga_dot_addr;
-
+static unsigned char *iom_fpga_text_lcd_addr;
 
 // Define functions
 int dev_driver_open(struct inode *, struct file *);
@@ -83,14 +83,21 @@ static void kernel_timer_blink(unsigned long timeout) {
 	unsigned short fnd_value_short = 0;
 	unsigned short led_value_short = 0;
 	unsigned short dot_value_short = 0;
+	unsigned short text_lcd_value_short = 0;
 
 	unsigned char fnd_value[4];
 	unsigned char led_value;
 	unsigned char dot_value[10];
+	unsigned char text_lcd_value[33];
 
 	// Check for terminating timer
 	p_data->count++;
 	if( p_data->count > p_data->time_repeat ) {
+		// Init the fnd module
+		for(i=0;i<4;i++){
+			fnd_value_short = 0;
+			outw(fnd_value_short, (unsigned int)iom_fpga_fnd_addr);
+		}
 		// Turn off the led module
 		led_value_short = 0;
 		outw(led_value_short, (unsigned int)iom_fpga_led_addr);
@@ -98,6 +105,12 @@ static void kernel_timer_blink(unsigned long timeout) {
 		for(i=0;i<10;i++){
 			dot_value_short = 0;
 			outw(dot_value_short, (unsigned int)iom_fpga_dot_addr+i*2);
+		}
+		// Init the text_lcd module
+		for(i=0;i<33;i++){
+			text_lcd_value_short = 0x20 << 8 | 0x20; //space
+			outw(text_lcd_value_short, (unsigned int)iom_fpga_text_lcd_addr+i);
+			i++;
 		}
 		return;
 	}
@@ -164,7 +177,7 @@ static void kernel_timer_blink(unsigned long timeout) {
 	}
 	
 	// 4. Write to lcd device
-
+	
 	// 5. update fnd_place, fnd_value;
 	p_data->fnd_value++;
 	if(p_data->count%8 == 0){
@@ -249,6 +262,7 @@ int __init dev_driver_init(void)
 	iom_fpga_fnd_addr = ioremap(IOM_FND_ADDRESS, 0x4);
 	iom_fpga_led_addr = ioremap(IOM_LED_ADDRESS, 0x1);
 	iom_fpga_dot_addr = ioremap(IOM_DOT_ADDRESS, 0x10);
+	iom_fpga_text_lcd_addr = ioremap(IOM_TEXT_LCD_ADDRESS, 0x32);
 
 	// Initialize timer
 	init_timer(&(mydata.timer));
@@ -267,6 +281,7 @@ void __exit dev_driver_exit(void)
 	iounmap(iom_fpga_fnd_addr);
 	iounmap(iom_fpga_led_addr);
 	iounmap(iom_fpga_dot_addr);
+	iounmap(iom_fpga_text_lcd_addr);
 
 	unregister_chrdev(DEV_DRIVER_MAJOR, DEV_DRIVER_NAME);
 }
