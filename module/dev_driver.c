@@ -33,6 +33,9 @@ static unsigned char *iom_fpga_led_addr;
 static unsigned char *iom_fpga_dot_addr;
 static unsigned char *iom_fpga_text_lcd_addr;
 
+static bool flag_line1 = false; // false for right
+static bool flag_line2 = false;	// true for left
+
 // Define functions
 int dev_driver_open(struct inode *, struct file *);
 int dev_driver_release(struct inode *, struct file *);
@@ -40,6 +43,7 @@ ssize_t dev_driver_write(struct file *, const char *, size_t, loff_t *);
 long dev_driver_ioctl(struct file *inode,
 					 unsigned int ioctl_num,
 					 unsigned long ioctl_param);
+void cal_text_line(char *text_lcd_value);
 
 // Define file_operations structure
 static struct file_operations dev_driver_fops =
@@ -51,7 +55,7 @@ static struct file_operations dev_driver_fops =
 	.release 		= dev_driver_release
 };
 
-static struct struct_mydata {
+struct struct_mydata {
 	struct timer_list timer;
 	int count;
 	char fnd_place;
@@ -88,7 +92,9 @@ static void kernel_timer_blink(unsigned long timeout) {
 	unsigned char fnd_value[4];
 	unsigned char led_value;
 	unsigned char dot_value[10];
-	unsigned char text_lcd_value[33];
+	static unsigned char text_lcd_value[33]="20100008        Gang Hyun Goo   ";
+	unsigned char init_text_lcd[33]="20100008        Gang Hyun Goo   ";
+
 
 	// Check for terminating timer
 	p_data->count++;
@@ -112,6 +118,10 @@ static void kernel_timer_blink(unsigned long timeout) {
 			outw(text_lcd_value_short, (unsigned int)iom_fpga_text_lcd_addr+i);
 			i++;
 		}
+		flag_line1 = false;
+		flag_line2 = false;
+		for(i=0;i<33;i++)
+			text_lcd_value[i] = init_text_lcd[i];
 		return;
 	}
 	printk("Executed kernel_timer_count %d\n", p_data->count);
@@ -175,9 +185,18 @@ static void kernel_timer_blink(unsigned long timeout) {
 		dot_value_short = dot_value[i] & 0x7F;
 		outw(dot_value_short, (unsigned int)iom_fpga_dot_addr+i*2);
 	}
-	
+
 	// 4. Write to lcd device
-	
+	if(p_data->count!=1)
+		cal_text_line(text_lcd_value);
+	for(i=0; i<32; i++)
+	{
+		text_lcd_value_short = (text_lcd_value[i] & 0xFF) << 8 |
+								(text_lcd_value[i+1] & 0xFF);
+		outw(text_lcd_value_short, (unsigned int)iom_fpga_text_lcd_addr+i);
+		i++;
+	}
+
 	// 5. update fnd_place, fnd_value;
 	p_data->fnd_value++;
 	if(p_data->count%8 == 0){
@@ -191,6 +210,44 @@ static void kernel_timer_blink(unsigned long timeout) {
 
 	add_timer(&mydata.timer);
 }
+
+void cal_text_line(char *text_lcd_value){
+	int i;
+	
+	// flag_line1,2 are false to right, true to left
+	// For the line1
+	if(flag_line1==false){ 	// move to right
+		for(i=0;i<15;i++){ 			// 15th~1st
+			text_lcd_value[15-i] = text_lcd_value[15-i-1];
+		}
+		text_lcd_value[0] = 0x20; 	// 0th
+		if(text_lcd_value[15]!=0x20) flag_line1 = true;
+	}
+	else{				// move to left
+		for(i=0;i<15;i++){			// 0~14th
+			text_lcd_value[i] = text_lcd_value[i+1];
+		}
+		text_lcd_value[i] = 0x20;	// 15th
+		if(text_lcd_value[0]!=0x20) flag_line1 = false;
+	}
+
+	// For the line2
+	if(flag_line2==false){	// move to right
+		for(i=0;i<15;i++){			// 31st~17th
+			text_lcd_value[31-i] = text_lcd_value[31-i-1];
+		}
+		text_lcd_value[16] = 0x20;	// 16th
+		if(text_lcd_value[31]!=0x20) flag_line2 = true;
+	}
+	else{					// move to left
+		for(i=0;i<15;i++){			// 16th~30th
+			text_lcd_value[16+i] = text_lcd_value[16+i+1];
+		}
+		text_lcd_value[16+i] = 0x20;// 31st
+		if(text_lcd_value[16]!=0x20) flag_line2 = false;
+	}
+}
+
 
 ssize_t dev_driver_write(struct file *inode, const char *gdata, size_t length, loff_t *off_what) {
 	int i;
