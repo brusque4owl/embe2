@@ -7,8 +7,6 @@
 #include <string.h>
 #include <sys/ioctl.h>
 
-#include "./fpga_dot_font.h"
-
 #include "../module/dev_driver.h"
 
 #define FPGA_DOT_DEVICE "/dev/fpga_dot"

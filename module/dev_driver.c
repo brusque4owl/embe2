@@ -14,6 +14,7 @@
 #include <linux/version.h>
 
 #include "dev_driver.h"
+#include "fpga_dot_font.h"
 
 #define DEV_DRIVER_MAJOR 242
 #define DEV_DRIVER_MINOR 0
@@ -29,6 +30,7 @@
 static int dev_driver_usage = 0;
 static unsigned char *iom_fpga_fnd_addr;
 static unsigned char *iom_fpga_led_addr;
+static unsigned char *iom_fpga_dot_addr;
 
 
 // Define functions
@@ -80,9 +82,11 @@ static void kernel_timer_blink(unsigned long timeout) {
 	// Variables for FND module
 	unsigned short fnd_value_short = 0;
 	unsigned short led_value_short = 0;
+	unsigned short dot_value_short = 0;
 
 	unsigned char fnd_value[4];
 	unsigned char led_value;
+	unsigned char dot_value[10];
 
 	// Check for terminating timer
 	p_data->count++;
@@ -90,6 +94,11 @@ static void kernel_timer_blink(unsigned long timeout) {
 		// Turn off the led module
 		led_value_short = 0;
 		outw(led_value_short, (unsigned int)iom_fpga_led_addr);
+		// Turn off the dot module
+		for(i=0;i<10;i++){
+			dot_value_short = 0;
+			outw(dot_value_short, (unsigned int)iom_fpga_dot_addr+i*2);
+		}
 		return;
 	}
 	printk("Executed kernel_timer_count %d\n", p_data->count);
@@ -145,8 +154,15 @@ static void kernel_timer_blink(unsigned long timeout) {
 	}
 	led_value_short = (unsigned short)led_value;
 	outw(led_value_short, (unsigned int)iom_fpga_led_addr);
-	// 3. Write to dot device
 
+	// 3. Write to dot device
+	for(i=0;i<10;i++){
+		// take number from fpga_dot_font.h
+		dot_value[i] = fpga_number[(int)fnd_value[(int)p_data->fnd_place]][i];
+		dot_value_short = dot_value[i] & 0x7F;
+		outw(dot_value_short, (unsigned int)iom_fpga_dot_addr+i*2);
+	}
+	
 	// 4. Write to lcd device
 
 	// 5. update fnd_place, fnd_value;
@@ -232,6 +248,7 @@ int __init dev_driver_init(void)
 	// Mapping fpga physical mem to kernel(fnd, led, dot, lcd)
 	iom_fpga_fnd_addr = ioremap(IOM_FND_ADDRESS, 0x4);
 	iom_fpga_led_addr = ioremap(IOM_LED_ADDRESS, 0x1);
+	iom_fpga_dot_addr = ioremap(IOM_DOT_ADDRESS, 0x10);
 
 	// Initialize timer
 	init_timer(&(mydata.timer));
@@ -249,6 +266,7 @@ void __exit dev_driver_exit(void)
 	// Unmappingg fpga physical mem from kernel
 	iounmap(iom_fpga_fnd_addr);
 	iounmap(iom_fpga_led_addr);
+	iounmap(iom_fpga_dot_addr);
 
 	unregister_chrdev(DEV_DRIVER_MAJOR, DEV_DRIVER_NAME);
 }
