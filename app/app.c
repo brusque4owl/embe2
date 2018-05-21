@@ -35,7 +35,7 @@ int ioctl_write(int dev_fd, char *gdata){
 		printf("ioctl_write failed:%d\n", ret_val);
 		return -1;
 	}
-	printf("ioctl_write success\n");
+	//printf("ioctl_write success\n");
 	return 0;
 }
 
@@ -95,7 +95,6 @@ int main(int argc, char **argv)
 	}
 
 	// Implement main program
-	
 	int dev_fd;
 	dev_fd = open("/dev/dev_driver", O_WRONLY);
 	if(dev_fd<0){
@@ -104,11 +103,12 @@ int main(int argc, char **argv)
 	}
 	
 	ret_val = syscall(376, &input);
-	printf("syscall ret_val = %d\n", ret_val);
+	//printf("syscall ret_val = %d\n", ret_val);
 
 	// make gdata since can't pass int variable to write()
 	char gdata[4];
-	gdata[0] = (ret_val & MASK_FND_PLACE) >> 24;
+	gdata[0] = ret_val >> 24;
+	//gdata[0] = (ret_val & MASK_FND_PLACE) >> 24;
 	gdata[1] = (ret_val & MASK_FND_VALUE) >> 16;
 	gdata[2] = (ret_val & MASK_TIME_INTERVAL) >> 8;
 	gdata[3] = (ret_val & MASK_TIME_REPEAT);

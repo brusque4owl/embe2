@@ -250,7 +250,7 @@ void cal_text_line(char *text_lcd_value){
 
 
 ssize_t dev_driver_write(struct file *inode, const char *gdata, size_t length, loff_t *off_what) {
-	int i;
+	//int i;
 	const char *tmp = gdata;// gdata is syscall ret val
 	char syscall_data[4];	// store return value of syscall
 	char fnd_place, fnd_value, time_interval, time_repeat;
@@ -259,11 +259,13 @@ ssize_t dev_driver_write(struct file *inode, const char *gdata, size_t length, l
 	if (copy_from_user(&syscall_data, tmp, 1)) {
 		return -EFAULT;
 	}
+	/*
 	printk("\n\n");
 	for(i=0;i<4;i++){
 		printk("[dev_write] gdata[%d] = %d\n", i, gdata[i]);
 	}
 	printk("\n\n");
+	*/
 	fnd_place = gdata[0];
 	fnd_value = gdata[1];
 	time_interval = gdata[2];
@@ -293,7 +295,7 @@ long dev_driver_ioctl(struct file *inode,
 					 unsigned int ioctl_num,
 					 unsigned long ioctl_param) {
 	int ret_val;
-	printk("\n\nnow it is using ioctl in kernel\n\n");	
+	//printk("\n\nnow it is using ioctl in kernel\n\n");	
 	switch(ioctl_num){
 		case IOCTL_WRITE:
 			ret_val = dev_driver_write(inode, (char *)ioctl_param, 0, 0);
