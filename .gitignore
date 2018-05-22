@@ -2,7 +2,6 @@ app/app
 tags
 usage_of_sh
 backup_syscall/
-given/
 *.o*
 *.sh
 *.ko*
